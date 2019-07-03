@@ -1,0 +1,166 @@
+<style>
+
+/* latin */
+@font-face {
+  font-family: 'Coming Soon';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("./Coming Soon.woff2") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+  body
+  {
+    background-color: #ffe599ff;
+    font-family: "Open Sans", "sans-serif";
+    font-size: 1em;
+  }
+  
+  .hidden
+  {
+    display: none;
+  }
+  
+  #canvas
+  {
+    position: absolute;
+  }
+  
+  .pull-right
+  {
+    float: right;
+  }
+  
+  /* The Modal (background) */
+.modal {
+  position: fixed; /* Stay in place */
+  z-index: 1; /* Sit on top */
+  padding-top: 10px; /* Location of the box */
+  left: 0;
+  top: 0;
+  width: 100%; /* Full width */
+  height: 100%; /* Full height */
+  overflow: auto; /* Enable scroll if needed */
+  background-color: rgb(0,0,0); /* Fallback color */
+  background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+}
+
+/* Modal Content */
+.modal-content {
+  background-color: #fefefe;
+  margin: auto;
+  padding: 10px;
+  border: 1px solid #888;
+  width: 50%;
+  height: 90%;
+}
+
+/* The Close Button */
+.close {
+  color: #aaaaaa;
+  float: right;
+  font-size: 28px;
+  font-weight: bold;
+}
+
+.close:hover,
+.close:focus {
+  color: #000;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.btn {
+  border: 2px solid #5b850f;
+  border-radius: 1em;
+  background-color: #98a826;
+  color: white;
+  padding: .5em 1em;
+  font-size: 1.5em;
+  cursor: pointer;
+  
+  text-align: center;
+  vertical-align:middle;
+  display:table-cell
+}
+
+#submit {
+  height: 50px;
+  width: 50px;
+}
+
+.ctr
+{
+  margin: auto;
+  width: 25%;
+  padding: 10em 0rem;
+}
+
+form {
+  font-size: 1.35rem;
+}
+
+input[type=radio]:checked {
+  border: 5px solid #0DFF92;
+}
+
+input[type=radio]:checked {
+  background: #0DFF92;
+}
+
+webview {
+   display: flex;
+   height: 95%;
+   width: 100%;
+}
+
+</style>
+
+<h1 class="pull-right btn" id="signout">Signing Out a Student?</h1>
+
+<div class="ctr">
+
+<form id="form">
+  <strong>Full Name:</strong><br>
+  <input type="text" name="name"/><br><br>
+  
+  <strong>Reason for your Visit:</strong><br>
+  <input type="radio" name="reason" value="male" checked> Volunteering<br>
+  <input type="radio" name="reason" value="female"> Meeting<br>
+  <input type="radio" name="reason" value="other"> Classroom Visit<br><br>
+  
+  <strong>Destination:</strong><br>
+  <input type="text" name="dest"/><br><br>
+  
+  <h3 class="btn" id="submit">Submit</h3>
+</form>
+
+</div>
+
+
+<div id="video-modal" class="modal hidden">
+  <div class="modal-content">
+    <span class="close">&times;</span>
+    <video id="player" autoplay></video>
+    <h5 class="btn" id="capture">Capture</h5>
+  </div>
+</div>
+
+<div id="preview-modal" class="modal hidden">
+  <div class="modal-content">
+    <span class="close">&times;</span>
+    Test
+    <canvas id="canvas" class="" width=500 height=500></canvas>
+  </div>
+</div>
+
+<div id="signout-modal" class="modal hidden">
+  <div class="modal-content">
+    <span class="close">&times;</span>
+    <webview id="webview" src="https://docs.google.com/forms/viewform?bc=transparent&embedded=true&f=%2522Open%2BSans%2522%252C%2Bsans-serif&hl=en&htc=%2523eeeeee&id=1Rhpwv-araIaZroQZoEIWZKFqTfHIbDu2Y1uixdsd6Ho&lc=%2523298cca&pli=1&tc=%2523616161&ttl=0"></webview>
+  </div>
+</div>
+
+<script src="jquery.min.js"></script>
+<script src="app.js"></script>
