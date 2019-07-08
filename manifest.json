@@ -9,6 +9,7 @@
   },
   "permissions": [
     "videoCapture",
-    "webview"
+    "webview",
+    "script.google.com"
   ]
 }
