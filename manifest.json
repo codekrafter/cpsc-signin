@@ -10,6 +10,7 @@
   "permissions": [
     "videoCapture",
     "webview",
-    "script.google.com"
+    "script.google.com",
+    "google.com"
   ]
 }
