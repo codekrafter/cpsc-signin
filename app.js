@@ -1,5 +1,3 @@
-console.log("Started Loading App.js...")
-
 import Cropper from './cropper/cropper.esm.js';
 
 const player = $("#player")[0];
@@ -141,7 +139,6 @@ $("#canvas").click(() => {
 
 $("#preview").click(() => {
   if (previewed) {
-    //TODO: Print
     var params = JSON.stringify(svgParams);
 
     let demoSVG = `<?xml version="1.0" standalone="no"?>
@@ -155,7 +152,8 @@ $("#preview").click(() => {
       orientation: 'p',
       unit: 'px',
       format: [353, 504]
-    })
+    });
+
     doc.addSvgAsImage(demoSVG, 0, 0, 353, 504, "demoSVG", "NONE", 0)
 
     var pdf = doc.output('datauri', { filename: "id.pdf" });
@@ -165,6 +163,8 @@ $("#preview").click(() => {
         console.error("Error on File Upload");
       } else {
         gapi.print.submit(id);
+
+
       }
     });
   } else
@@ -235,9 +235,6 @@ $("#preview").click(() => {
 
       $("#preview").text("Print");
       previewed = true;
-
-      //TODO: Print
-      //gapi.print.submit();
     }
 })
 
@@ -264,5 +261,3 @@ generateSVG = function (name, year, title, image) {
   return svg;
 
 }
-
-console.log("Loaded App.js");
