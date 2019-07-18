@@ -1,4 +1,5 @@
 <link href="cropper/cropper.css" rel="stylesheet">
+<link href="material.css" rel="stylesheet">
 <style>
   /* latin */
   @font-face {
@@ -11,10 +12,13 @@
   }
 
   body {
-    background-color: #ffe599ff;
+    background-color: #ffedb8;
+    /*<-- Toned Down, Original: #ffe599*/
+    /*background-color: #FAFAFA;*/
     font-family: "Open Sans", "sans-serif";
-    font-size: 1em;
   }
+
+
 
   .hidden {
     display: none;
@@ -24,36 +28,10 @@
     float: right;
   }
 
-  /* The Modal (background) */
-  .modal {
-    position: fixed;
-    /* Stay in place */
-    z-index: 1;
-    /* Sit on top */
-    padding-top: 10px;
-    /* Location of the box */
-    left: 0;
-    top: 0;
-    width: 100%;
-    /* Full width */
-    height: 100%;
-    /* Full height */
-    overflow: auto;
-    /* Enable scroll if needed */
-    background-color: rgb(0, 0, 0);
-    /* Fallback color */
-    background-color: rgba(0, 0, 0, 0.4);
-    /* Black w/ opacity */
-  }
-
   /* Modal Content */
-  .modal-content {
-    background-color: #fefefe;
-    margin: auto;
-    padding: 10px;
-    border: 1px solid #888;
-    width: 50%;
-    height: 90%;
+  .full-modal {
+    width: 60vw;
+    height: 90vh;
   }
 
   /* The Close Button */
@@ -71,25 +49,6 @@
     cursor: pointer;
   }
 
-  .btn {
-    border: 2px solid #5b850f;
-    border-radius: 1em;
-    background-color: #98a826;
-    color: white;
-    padding: .5em 1em;
-    font-size: 1.5em;
-    cursor: pointer;
-
-    text-align: center;
-    vertical-align: middle;
-    display: table-cell
-  }
-
-  #submit {
-    height: 50px;
-    width: 50px;
-  }
-
   .ctr {
     margin: auto;
     width: 25%;
@@ -98,18 +57,11 @@
 
   .txt-ctr {
     text-align: center;
+    justify-content: center;
   }
 
   form {
     font-size: 1.35rem;
-  }
-
-  input[type=radio]:checked {
-    border: 5px solid #0DFF92;
-  }
-
-  input[type=radio]:checked {
-    background: #0DFF92;
   }
 
   webview {
@@ -138,12 +90,85 @@
     display: table-row;
     font-weight: bold;
   }
+
+  :root {
+    --mdc-theme-primary: #5b850f;
+    --mdc-theme-secondary: #98a826;
+  }
+
+
+  .mdl-cell {
+    box-sizing: border-box;
+    /*background-color: #BDBDBD;
+    color: white;
+    border-color: black;
+    border-style: solid;*/
+
+    text-align: center;
+  }
+
+  .mdl-cell button,
+  .mdl-cell form {
+    position: relative;
+    top: 50%;
+    transform: translateY(-50%);
+  }
+
+  .top .mdl-cell {
+    height: 5vh;
+  }
+
+  .header .mdl-cell {
+    height: 10vh;
+  }
+
+  .main .mdl-cell {
+    height: 65vh;
+  }
+
+  .footer .mdl-cell {
+    height: 20vh;
+  }
+
+  #radios {
+    text-align: justify;
+    display: inline-block;
+
+    border-radius: .5em;
+    padding: .75rem;
+    margin-top: .4rem;
+  }
+
+  .radio-error .mdl-radio__outer-circle {
+    border-color: rgba(213, 0, 0, .54);
+  }
+
+  .radio-error {
+    color: rgb(213, 0, 0);
+  }
+
+  #main-modal {
+    width: 80vw;
+    height: 90vh;
+    text-align: center;
+  }
+
+  .flash-blocker {
+    position: absolute;
+    z-index: 10;
+    background-color: white;
+  }
+
+  #main-canvas
+  {
+    max-width: 100%;
+  }
 </style>
 
-<h1 class="pull-right btn" id="signout">Signing Out a Student?</h1>
+<!--
+<h1 class="pull-right mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect mdl-button--accent" id="signout">Signing Out a Student?</h1>
 
 <div class="ctr">
-
   <form id="form">
     <strong>Full Name:</strong><br>
     <input type="text" name="name" id="name" /><br><br>
@@ -155,18 +180,92 @@
 
     <strong>Destination:</strong><br>
     <input type="text" name="dest" id="dest" /><br><br>
+    
 
-    <h3 class="btn" id="submit">Submit</h3>
+    <h3 class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect mdl-button--colored" id="submit">Submit</h3>
   </form>
 
 </div>
+-->
 
+<div class="mdl-grid top mdl-grid--no-spacing">
+  <div class="mdl-cell mdl-cell--12-col"><span></span></div>
+</div>
+<div class="mdl-grid header mdl-grid--no-spacing">
+  <div class="mdl-cell mdl-cell--9-col"><span></span></div>
+  <div class="mdl-cell mdl-cell--3-col">
+    <!-- Accent-colored raised button with ripple -->
+    <button id="signout" class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect mdl-button--accent">
+      Signing Out a Student?
+    </button>
+  </div>
+</div>
+<div class="mdl-grid main mdl-grid--no-spacing">
+  <div class="mdl-cell mdl-cell--4-col"><span></span></div>
+  <div class="mdl-cell mdl-cell--4-col">
+    <form id="form">
+      <strong>
+        <h3>Please Sign In: </h3>
+      </strong>
+      <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label txt-name">
+        <input class="mdl-textfield__input" type="text" id="name" name="name">
+        <label class="mdl-textfield__label" for="name">Name</label>
+      </div>
+      <br>
+      <br>
+      <!--
+      <strong>Reason for your Visit:</strong><br>
+      <input type="radio" name="reason" value="Volunteer" checked> Volunteering<br>
+      <input type="radio" name="reason" value="Meeting"> Meeting<br>
+      <input type="radio" name="reason" value="Visitor"> Classroom Visit<br><br>
+-->
+      <strong id="reason-head">Reason for your Visit: </strong><br>
+      <div id="radios">
+        <label class="mdl-radio mdl-js-radio mdl-js-ripple-effect" for="vol">
+          <input class="mdl-radio__button" id="vol" name="reason" type="radio" value="Volunteer">
+          <span class="mdl-radio__label">Volunteer</span>
+        </label>
+        <br>
+        <label class="mdl-radio mdl-js-radio mdl-js-ripple-effect" for="meeting">
+          <input class="mdl-radio__button" id="meeting" name="reason" type="radio" value="Meeting">
+          <span class="mdl-radio__label">Meeting</span>
+        </label>
+        <br>
+        <label class="mdl-radio mdl-js-radio mdl-js-ripple-effect" for="classroom">
+          <input class="mdl-radio__button" id="classroom" name="reason" type="radio" value="Classroom">
+          <span class="mdl-radio__label">Classroom</span>
+        </label>
+      </div>
+      <br>
+      <br>
+
+      <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label txt-dest">
+        <input class="mdl-textfield__input" type="text" id="dest" name="dest">
+        <label class="mdl-textfield__label" for="dest">Destination</label>
+      </div>
+      <br>
+      <br>
+
+
+      <button type="button" id="submit"
+        class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect mdl-button--accent">
+        Submit
+      </button>
+    </form>
+  </div>
+  <div class="mdl-cell mdl-cell--4-col"><span></span></div>
+</div>
+<div class="mdl-grid footer mdl-grid--no-spacing">
+  <div class="mdl-cell mdl-cell--3-col"><span></span></div>
+  <div class="mdl-cell mdl-cell--6-col"><span></span></div>
+  <div class="mdl-cell mdl-cell--3-col"><span></span></div>
+</div>
 
 <div id="video-modal" class="modal hidden">
   <div class="modal-content">
     <span class="close">&times;</span>
     <h1 class="txt-ctr"> Smile!</h1>
-    <video id="player" class="preview" autoplay></video>
+    <!--<video id="player" class="preview" autoplay></video>-->
     <div class="btn-ctr">
       <h5 class="btn btn-ctr txt-ctr" id="capture">Capture</h5>
     </div>
@@ -196,19 +295,52 @@
   </div>
 </div>
 
-<div id="signout-modal" class="modal hidden">
+<div id="snack" class="mdl-js-snackbar mdl-snackbar">
+  <div class="mdl-snackbar__text"></div>
+  <button class="mdl-snackbar__action" type="button" disabled></button>
+</div>
+
+<!--<div id="signout-modal" class="modal hidden">
   <div class="modal-content">
     <span class="close">&times;</span>
     <webview id="webview"
       src="https://docs.google.com/forms/viewform?bc=transparent&embedded=true&f=%2522Open%2BSans%2522%252C%2Bsans-serif&hl=en&htc=%2523eeeeee&id=1Rhpwv-araIaZroQZoEIWZKFqTfHIbDu2Y1uixdsd6Ho&lc=%2523298cca&pli=1&tc=%2523616161&ttl=0">
     </webview>
   </div>
-</div>
+</div>-->
+
+<dialog class="mdl-dialog txt-ctr" id="main-modal">
+  <span class="close">&times;</span>
+  <h4 class="mdl-dialog__title" id="modal-title">Smile!</h4>
+  <div class="mdl-dialog__content txt-ctr">
+    <video id="player" class="preview" autoplay></video>
+    <div>
+      <canvas id="main-canvas" class="hidden preview"></canvas>
+    </div>
+    <div id="flash-blocker" class="flash-blocker hidden"></div>
+  </div>
+  <div class="mdl-dialog__actions txt-ctr">
+    <button id="btn-pri" type="button" class="mdl-button capture">Capture</button>
+    <button id="btn-sec" type="button" class="mdl-button go-back">Go Back</button>
+  </div>
+</dialog>
+
+<dialog class="mdl-dialog full-modal" id="signout-modal">
+  <span class="close">&times;</span>
+  <h4 class="mdl-dialog__title">Sign Out a Student</h4>
+  <div class="mdl-dialog__content">
+    <webview id="webview_new"
+      src="https://docs.google.com/forms/viewform?bc=transparent&embedded=true&f=%2522Open%2BSans%2522%252C%2Bsans-serif&hl=en&htc=%2523eeeeee&id=1Rhpwv-araIaZroQZoEIWZKFqTfHIbDu2Y1uixdsd6Ho&lc=%2523298cca&pli=1&tc=%2523616161&ttl=0">
+    </webview>
+</dialog>
 
 <script src="jquery.min.js"></script>
 <script src="jsrsasign-latest-all-min.js"></script>
 <script src="canvg.min.js"></script>
 <script src="jspdf.min.js"></script>
+<script src="material.js"></script>
+<script src="cropper/cropper.js"></script>
+<script src="cropper/jquery-cropper.js"></script>
 <script src="gapi.js"></script>
 <script src="template.js"></script>
 <script type="module" src="app.js"></script>

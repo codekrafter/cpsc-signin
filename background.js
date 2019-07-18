@@ -11,5 +11,5 @@ chrome.app.runtime.onLaunched.addListener(function() {
       width: 700,
       height: 600
     }
-  });
+  }, (win) => {win.fullscreen()});
 });

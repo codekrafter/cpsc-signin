@@ -103,16 +103,18 @@ gapi.auth = function (email, scope, private_key_str, callback) {
 
 gapi.print = {};
 gapi.drive = {};
+gapi.gmail = {};
 
 gapi.print.submit = function (img) {
+    console.log("pre refresh")
     // Make sure we have an access token
     gapi.refresh(() => {
-
+        console.log("printing");
         var xhr = new XMLHttpRequest();
         var printerID = "eddsecp@cpsfc.org"//Also Target Email, "b45bfeeb-46b2-2665-3169-738623ffd140"; // Ringo for Testing, change to proper printer on deploy
         var title = "Test Print Job";
         var data = img;
-        var contentType = "application/pdf";
+        var contentType = "image/png";
         var tags = "Automated; Sign In; ID";
 
         //formData.append("", "drunknight");
@@ -126,7 +128,13 @@ gapi.print.submit = function (img) {
         //xhr.setRequestHeader("Authorization", "Bearer" + gapi._auth.access_token);
 
         xhr.addEventListener('load', function (e) {
+            console.log(e);
             console.error(xhr.responseText);
+        });
+
+        xhr.addEventListener('error', function (event) {
+            console.log('Oops! Something went wrong.');
+            return;
         });
 
         //console.log("submitted search request");
@@ -134,6 +142,32 @@ gapi.print.submit = function (img) {
         xhr.send();//formData);
 
         //$.ajax({type: "POST", url: 'https://www.google.com/cloudprint/search', data: {}, success: (data, status) => {console.log(status);console.log(data);}});
+    });
+}
+
+gapi.gmail.send = function (to, cc, id) {
+    // Make sure we have an access token
+    gapi.refresh(() => {
+        var id;
+        $.ajax({
+            type: "POST",
+            url: 'https://www.googleapis.com/upload/gmail/v1/users/me/messages/send?uploadType=media',
+            data: data,
+            error: (xhr, textStatus, errorThrown) => {
+                console.log(errorThrown);
+                console.log(textStatus);
+                console.log(xhr.responseText);
+                callback(false);
+            },
+            contentType: contentType,
+            headers: {
+                Authorization: "Bearer " + gapi._auth.access_token
+            },
+            success: (data, status) => {
+                console.log(status);
+                console.log(data);
+            }
+        });
     });
 }
 
@@ -181,9 +215,10 @@ gapi.drive.upload = function (name, data, contentType, callback) {
                         console.log(data);
 
                         var permissions = {
-                            'type': 'anyone',
-                            'role': 'reader'
-                        }
+                            'type': 'user',
+                            'role': 'reader',
+                            'emailAddress': 'eddsecp@cpsfc.org'
+                        };
 
                         $.ajax({
                             type: "POST",
@@ -200,6 +235,8 @@ gapi.drive.upload = function (name, data, contentType, callback) {
                             },
                             contentType: "application/json",
                             success: (data, status) => {
+                                console.log(status);
+                                console.log(data);
                                 callback(true, id);
                             }
                         });
