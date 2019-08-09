@@ -1,17 +1,24 @@
 {
   "name": "CPSC Sign In",
-  "version": "1.0",
+  "version": "1.7",
   "manifest_version": 2,
   "app": {
     "background": {
-      "scripts": ["background.js"]
+      "scripts": [
+        "background.js"
+      ]
     }
   },
   "permissions": [
     "videoCapture",
     "webview",
-    "script.google.com",
-    "google.com",
+    "storage",
     "fullscreen"
-  ]
+  ],
+  "icons": {
+    "16": "icon128.png",
+    "128": "icon128.png"
+  },
+  "kiosk_enabled" : true,
+  "kiosk_only" : false
 }

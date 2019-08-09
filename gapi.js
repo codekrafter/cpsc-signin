@@ -105,14 +105,14 @@ gapi.print = {};
 gapi.drive = {};
 gapi.gmail = {};
 
-gapi.print.submit = function (img) {
+gapi.print.submit = function (img, name, email) {
     console.log("pre refresh")
     // Make sure we have an access token
     gapi.refresh(() => {
         console.log("printing");
         var xhr = new XMLHttpRequest();
-        var printerID = "eddsecp@cpsfc.org"//Also Target Email, "b45bfeeb-46b2-2665-3169-738623ffd140"; // Ringo for Testing, change to proper printer on deploy
-        var title = "Test Print Job";
+        var printerID = (email == undefined) ? "eddsecp@cpsfc.org" : email;//Also Target Email, "b45bfeeb-46b2-2665-3169-738623ffd140"; // Ringo for Testing, change to proper printer on deploy
+        var title = name;//"Test Print Job";
         var data = img;
         var contentType = "image/png";
         var tags = "Automated; Sign In; ID";
@@ -215,9 +215,9 @@ gapi.drive.upload = function (name, data, contentType, callback) {
                         console.log(data);
 
                         var permissions = {
-                            'type': 'user',
+                            'type': 'domain',
                             'role': 'reader',
-                            'emailAddress': 'eddsecp@cpsfc.org'
+                            'domain': 'cpsfc.org'
                         };
 
                         $.ajax({

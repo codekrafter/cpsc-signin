@@ -13,6 +13,18 @@ var reset;
 
 var svgParams = {};
 
+var settingsCode = "";
+var doKeypadAction;
+var openSettingsCode = "";
+var openSettings;
+
+var updateTranslation;
+
+var currentLangauge = "en";
+
+var timeout;
+var doTimeout;
+let TIMEOUT_TIME = 120000;
 // Program state fake enum
 var ProgramStateEnum = Object.freeze({ "HOME_SCREEN": 0, "SIGN_OUT": 1, "IMG_CAPTURE": 2, "IMG_PREVIEW": 3, "IMG_CROP": 4, "ID_PREVIEW": 5, "PRINTED": 6 })
 
@@ -40,6 +52,60 @@ $().ready(() => {
     .then((stream) => {
       player.srcObject = stream;
     });
+
+  chrome.storage.local.get(['isK4'], function (result) {
+    if (result.isK4) {
+      $("#mode-sel-label").addClass("is-checked");
+      $("#mode-sel").prop("checked", true);
+    }
+  });
+
+  languative.modifyDictionary("es", {
+    button_sign_in_out: "Registro de entrada y salida de estudiantes",
+    button_staff_clock: "Entrada y salida del personal",
+    header_sign_in: "Por favor registrese",
+    label_name: "Nombre",
+    button_lang: "English",
+    header_reason: "Rason de su visita:",
+    label_volunteer: "Voluntario",
+    label_meeting: "Reunion",
+    label_classroom: "Visita al aula",
+    label_dest: "Destino",
+    button_submit: "Enviar",
+    title_sign_in_out: "Registro de enttrada y salida de estudiantes",
+    title_clock_in_out: "Hora de entrada y salida",
+    error_header: "Por favor proporcione",
+    error_reason: "una razon para su visita",
+    error_name: "un nombre",
+    error_dest: "un destino",
+    error_and: "y",
+    button_capture: "Tome una foto",
+    button_back: "hagase para atras",
+    title_capture: "Sonria",
+    button_crop: "Cortar",
+    button_retake: "Volver a tomar",
+    button_preview: "Revisar",
+    button_print: "Imprimir",
+    button_cancel: "Cancelar"
+  });
+
+  languative.modifyDictionary("en", {
+    title_sign_in_out: "Sign In/Sign Out a Student",
+    title_clock_in_out: "Clock In/Out",
+    error_header: "Please provide",
+    error_reason: "a reason for your visit",
+    error_name: "a name",
+    error_dest: "a destination",
+    error_and: "and",
+    button_capture: "Capture",
+    button_back: "Go Back",
+    title_capture: "Smile!",
+    button_crop: "Crop",
+    button_retake: "Retake",
+    button_preview: "Preview",
+    button_print: "Print",
+    button_cancel: "Cancel"
+  })
 })
 
 $("#signout").click(() => {
@@ -47,7 +113,56 @@ $("#signout").click(() => {
 
   CurrentState = ProgramStateEnum.SIGN_OUT;
 
-  $("#webview").attr('width', $("#signout-modal .modal-content").innerWidth());
+  //$("#webview").attr('width', $("#signout-modal .modal-content").innerWidth());
+  $("#signout-title").text(languative.getPhrase("title_sign_in_out"));
+  $("#webview").attr('src', 'https://docs.google.com/forms/viewform?bc=transparent&embedded=true&f=%2522Open%2BSans%2522%252C%2Bsans-serif&hl=en&htc=%2523eeeeee&id=1Rhpwv-araIaZroQZoEIWZKFqTfHIbDu2Y1uixdsd6Ho&lc=%2523298cca&pli=1&tc=%2523616161&ttl=0');
+
+  if (!timeout) {
+    timeout = setTimeout(doTimeout, TIMEOUT_TIME);
+  }
+});
+
+function resetDoTimeout() {
+  clearTimeout(timeout);
+  timeout = setTimeout(doTimeout, TIMEOUT_TIME);
+}
+
+doTimeout = function () {
+  $("dialog").each(function (i, e) { e.close(); });
+  reset();
+}
+
+$(document).on("keydown mousemove", resetDoTimeout);
+
+/*$("#asp-signout").click(() => {
+  $("#signout-modal")[0].showModal();
+
+  CurrentState = ProgramStateEnum.SIGN_OUT;
+
+  //$("#webview").attr('width', $("#signout-modal .modal-content").innerWidth());
+  $("#signout-title").text("Afterschool Signout");
+  $("#webview").attr('src', 'https://docs.google.com/forms/d/e/1FAIpQLSdCEurgP3AIkaaSWhHn8HbDiEzPYbUfqgBaICsI8cjktqPZ4g/viewform?usp=sf_link');
+});*/
+
+$("#open-settings").click(() => openSettings());
+
+openSettings = function () {
+  console.log($("#settings-modal")[0])
+  $("#settings-modal")[0].showModal();
+  $("#mode-sel").prop('disabled', true);
+
+  return false;
+};
+
+
+$("#clock-in-out").click(() => {
+  $("#signout-modal")[0].showModal();
+
+  CurrentState = ProgramStateEnum.SIGN_OUT;
+
+  //$("#webview").attr('width', $("#signout-modal .modal-content").innerWidth());
+  $("#signout-title").text(languative.getPhrase("title_clock_in_out"));
+  $("#webview").attr('src', 'https://docs.google.com/forms/d/e/1FAIpQLScP2Le5BcySDhdsDamHABxLgnD4TCwjx1g4vQTCvmlc530uoQ/viewform');
 });
 
 $("input[type=radio]").click(() => {
@@ -63,28 +178,28 @@ $("#submit").click(() => {
   var reason = $('input[type=radio][name=reason]').filter(':checked').val();
   if (!reason) {
     $("#radios, #reason-head").addClass("radio-error");
-    invalids.push("a reason for your visit");
+    invalids.push(languative.getPhrase("error_reason"));//"a reason for your visit");
   }
 
   if (!$("input[name=name]").val()) {
     $(".txt-name").addClass("is-invalid")
-    invalids.push("a name");
+    invalids.push(languative.getPhrase("error_name"));//"a name");
   }
 
   if (!$("input[name=dest]").val()) {
     $(".txt-dest").addClass("is-invalid")
 
-    invalids.push("a destination");
+    invalids.push(languative.getPhrase("error_dest"));//"a destination");
   }
 
   // Display toast with concatenated message
   if (invalids.length > 0) {
-    var msg = "Please provide ";
+    var msg = languative.getPhrase("error_header") + " ";
     let last = invalids.length - 1;
     if (invalids.length > 1) {
       invalids.forEach((field, i) => {
         if (i == last) {
-          msg += "and " + field.trim();
+          msg += languative.getPhrase("error_and") + " " + field.trim();
         }
         else {
           msg += field.trim() + ", ";
@@ -98,9 +213,13 @@ $("#submit").click(() => {
     return false;
   }
 
-  if(!$("#main-modal").attr("open")) {
-  $("#main-modal")[0].showModal();
+  if (!$("#main-modal").attr("open")) {
+    $("#btn-pri").addClass("capture").text(languative.getPhrase("button_capture"));
+    $("#btn-sec").addClass("go-back").text(languative.getPhrase("button_back"));
+    $("#modal-title").text(languative.getPhrase("title_capture"));
+    $("#main-modal")[0].showModal();
   }
+
   CurrentState = ProgramStateEnum.IMG_CAPTURE;
 
   $("#main-canvas").attr("width", $("#player").width());
@@ -122,33 +241,29 @@ $("dialog").click(function (event) {
   }
 });
 
-$(document).on('keypress', function (e) {
-  if (e.which == 13) {
-    if ($(e.target).parents("#form")) {
+$(document).on('keyup', function (e) {
+  if ($("#settings-modal").prop("open")) {
+    if (48 <= e.which && e.which <= 57) {
+      doKeypadAction(e.key);
+    } else if (e.which == 8) {
+      doKeypadAction("DEL");
+    }
+  } else if (e.which == 13) {
+    if ($(e.target).parents("#form") && $(e.target).is("input")) {
       $("#submit").click();
     } else {
-      e.target.click();
+      $(e.target).parents("button").click();
+    }
+  } else {
+    if (e.which == 32) {
+      openSettingsCode = "";
+    } else {
+      openSettingsCode += e.key;
     }
 
-    //console.log("Handling Enter Press (" + CurrentState + ")");
-    /*switch (CurrentState) {
-      case ProgramStateEnum.HOME_SCREEN:
-        $("#submit").click();
-        break;
-      case ProgramStateEnum.IMG_CAPTURE:
-      case ProgramStateEnum.IMG_PREVIEW:
-      case ProgramStateEnum.IMG_CROP:
-      case ProgramStateEnum.ID_PREVIEW:
-        $("#btn-pri").click();
-        break;
-      case ProgramStateEnum.PRINTED:
-        break;
-      case ProgramStateEnum.SIGN_OUT:
-        break;
-      default:
-        console.error("ON ENTER PRESS: UNKNOWN PROGRAM STATE " + CurrentState);
-        break;
-    }*/
+    if (openSettingsCode == "huntst") {
+      openSettings();
+    }
   }
 });
 
@@ -160,7 +275,10 @@ reset = function () {
   $("#main-canvas").addClass("hidden");
   $("#flash-blocker").addClass("hidden").css({ opacity: 1 });
 
-  $("#btn-pri").addClass("capture").removeClass("crop").removeClass("btn-preview").removeClass("print").text("Capture");
+  $("#btn-pri")/*.addClass("capture")*/.removeClass("crop").removeClass("btn-preview").removeClass("print")//.text("Capture");
+  $("#btn-sec")/*.removeClass("retake")*/.addClass("go-back")//.text("Go Back");
+
+  settingsCode = "";
 }
 
 $('body').on('click', '.capture', () => {
@@ -193,8 +311,8 @@ $('body').on('click', '.capture', () => {
     opacity: 0,
   }, 500);
 
-  $("#btn-pri").removeClass("capture").addClass("crop").text("Crop");
-  $("#btn-sec").removeClass("go-back").addClass("retake").text("Retake");
+  $("#btn-pri").removeClass("capture").addClass("crop").text(languative.getPhrase("button_crop"));
+  $("#btn-sec").removeClass("go-back").addClass("retake").text(languative.getPhrase("button_retake"));
 });
 
 $('body').on('click', '.retake', () => {
@@ -207,7 +325,7 @@ $('body').on('click', '.retake', () => {
   $("#main-canvas").addClass("hidden");
   $("#flash-blocker").addClass("hidden").css({ opacity: 1 });
 
-  $("#btn-pri").addClass("capture").removeClass("crop").text("Capture");
+  $("#btn-pri").addClass("capture").removeClass("crop").text(languative.getPhrase("button_capture"));
 });
 
 $('body').on('click', '.crop', () => {
@@ -227,8 +345,8 @@ $('body').on('click', '.crop', () => {
     zoomable: false,
     cropBoxResizable: true,
     data: {
-      x: canvas.width / 2,
-      y: canvas.height / 2,
+      x: $("#main-canvas").width() / 2,
+      y: $("#main-canvas").height() / 2,
       width: width,
       height: height,
       rotate: 0,
@@ -237,7 +355,7 @@ $('body').on('click', '.crop', () => {
     }
   });
 
-  $("#btn-pri").removeClass("crop").addClass("btn-preview").text("Preview");
+  $("#btn-pri").removeClass("crop").addClass("btn-preview").text(languative.getPhrase("button_preview"));
 });
 
 $('body').on('click', '.btn-preview', function () {
@@ -260,7 +378,7 @@ $('body').on('click', '.btn-preview', function () {
 
   var ctx = $("#main-canvas")[0].getContext('2d');
 
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.clearRect(0, 0, $("#main-canvas").width(), $("#main-canvas").height());
   var img = new Image();
   img.onload = function () {
     ctx.drawImage(img, 0, 0);
@@ -270,100 +388,30 @@ $('body').on('click', '.btn-preview', function () {
   let image = document.createElement('img');
   img.src = url;
 
-  $("#btn-pri").removeClass("btn-preview").addClass("print").text("Print");
-  $("#btn-sec").removeClass("retake").addClass("go-back").text("Cancel");
+  $("#btn-pri").removeClass("btn-preview").addClass("print").text(languative.getPhrase("button_print"));
+  $("#btn-sec").removeClass("retake").addClass("go-back").text(languative.getPhrase("button_cancel"));
 });
 
-$('body').on('click', '.print', function() {
-  gapi.drive.upload("ID: " + svgParams.name, svg, "image/svg+xml", (success, id) => {
+$('body').on('click', '.print', function () {
+  gapi.drive.upload("ID: " + svgParams.title, svg, "image/svg+xml", (success, id) => {
     if (!success) {
       console.error("Error on File Upload");
     } else {
-      gapi.print.submit(id);
+      var email;
+      if ($("#mode-sel-label").hasClass("is-checked")) {
+        email = "wendyp@cpsfc.org";
+      } else {
+        email = "kay@cpsfc.org";
+      }
+      gapi.print.submit(id, svgParams.title, email);
     }
   });
-  CurrentState = ProgramStateEnum.PRINTED;
+
+  $("#main-modal")[0].close();
+  reset();
+
+  CurrentState = ProgramStateEnum.HOME_SCREEN;
 });
-
-$("#preview").click(() => {
-  if (previewed) {
-    var params = JSON.stringify(svgParams);
-
-    gapi.drive.upload("ID: " + svgParams.name, svg, "image/svg+xml", (success, id) => {
-      if (!success) {
-        console.error("Error on File Upload");
-      } else {
-        gapi.print.submit(id);
-      }
-    });
-  } else if (!croppedImage) {
-    croppedImage = true;
-    $("#preview").text("Preview ID");
-
-    let factor = 1 / 3;
-    var width = 1030 * factor;
-    var height = 1283 * factor;
-
-    cropper = new Cropper(canvas, {
-      viewMode: 2,
-      dragMode: 'move',
-      aspectRatio: width / height,
-      movable: false,
-      rotatable: false,
-      scalable: false,
-      zoomable: false,
-      cropBoxResizable: true,
-      strict: true,
-      data: {
-        x: canvas.width / 2,
-        y: canvas.height / 2,
-        width: width,
-        height: height,
-        rotate: 0,
-        scaleX: 1,
-        scaleY: 1
-      }
-    });
-  } else {
-    var img;
-    if (cropper) {
-      img = cropper.getCroppedCanvas().toDataURL();
-      cropper.destroy();
-    } else {
-      console.error("ERROR: Cropper Does not Exist, cannot make ID")
-    }
-    console.log("Generating ID...");
-    var formArray = $("#form").serializeArray();
-    var form = {};
-
-    formArray.forEach((obj) => {
-      form[obj.name] = obj.value;
-    });
-    var name = form["name"];
-
-    var now = new Date();
-    var reason = form["reason"] + " | " + now.getMonth() + "/" + now.getDay() + "/" + now.getFullYear().toString().substr(2, 2);
-
-    var dest = "To: " + form["dest"];
-
-    svg = generateSVG(dest, reason, name, img);
-
-    $("#canvas").attr("height", 353).attr("width", 504);
-
-    context.clearRect(0, 0, canvas.width, canvas.height);
-    var img = new Image();
-    img.onload = function () {
-      context.drawImage(img, 0, 0);
-    }
-
-    var url = 'data:image/svg+xml;base64, ' + btoa(svg);//URL.createObjectURL(blob);
-    let image = document.createElement('img');
-    img.src = url;
-
-    $("#preview").text("Print");
-    previewed = true;
-  }
-})
 
 // Generate an ID in the SVG format for the given name, year, title and image (in a base 64 uri)
 generateSVG = function (name, year, title, image) {
@@ -390,3 +438,79 @@ generateSVG = function (name, year, title, image) {
   return svg;
 
 }
+
+$("#save-settings").click(function () {
+  chrome.storage.local.set({ isK4: $("#mode-sel-label").hasClass("is-checked") }, function () { console.log("isK4 saved") });
+});
+
+function updatePIN() {
+  var correct = false;
+  $("#passcode").removeClass("pass-ok");
+  $("#passcode").removeClass("pass-bad");
+  // Hello! You can do inspect element. Thats cool. If you actually know what you are doing, talk to tech, you might be able to find some things to do. If not then just go away
+  if (settingsCode === "121") {
+    $("#mode-sel")[0].disabled = false;
+    $("#numpad_container .mdl-switch").removeClass("is-disabled");
+    $("#passcode").addClass("pass-ok");
+
+    correct = true;
+  } else {
+    if (settingsCode.length == 3) {
+      $("#passcode").addClass("pass-bad");
+    }
+
+    if (settingsCode.length == 4) {
+      settingsCode = settingsCode[3];
+    }
+
+    $("#mode-sel")[0].disabled = true;
+    $("#numpad_container .mdl-switch").addClass("is-disabled");
+  }
+  var pinOut = "";
+  var pinNum = (correct) ? settingsCode.length : settingsCode.length - 1
+  for (var i = 0; i < pinNum; i++) {
+    pinOut += "*";
+  }
+  if (settingsCode.length > 0 && !correct) {
+    pinOut = pinOut + settingsCode[settingsCode.length - 1];
+  }
+  $("#numpad_container input[type=text]").val(pinOut);
+}
+
+// Settings Manager
+$("#numpad_container button:not(#save-settings)").click((e) => { doKeypadAction($(e.target).parents("button").text().trim()); });
+
+doKeypadAction = function (action) {
+  action = action.trim();
+  if (action === "DEL") {
+    if (settingsCode.length > 1) {
+      settingsCode = settingsCode.substr(0, settingsCode.length - 1)
+    } else {
+      settingsCode = "";
+    }
+
+    updatePIN();
+  } else if (action === "CLR") {
+    settingsCode = "";
+
+    updatePIN();
+  } else {
+    settingsCode = settingsCode + action;
+    updatePIN();
+  }
+};
+
+$("#lang").click(() => {
+  console.log(JSON.stringify(languative.getDictionary("html")));
+  if (currentLangauge == "en") {
+    console.log("changing language to spanish")
+    languative.changeLanguage('es');
+    currentLangauge = "es";
+  } else if (currentLangauge == "es") {
+    console.log("changing language to english")
+    languative.changeLanguage('en');
+    currentLangauge = "en";
+  } else {
+    console.log("unknown language '" + currentLangauge + "'");
+  }
+});
