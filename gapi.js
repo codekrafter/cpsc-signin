@@ -11,13 +11,12 @@ gapi._auth = { bAuth: false, access_token: "", exp: 0, cache: undefined }
 gapi.refresh = function (callback) {
     if (gapi._auth.cache == undefined) {
         console.error("No Authentication Request Cache, cannot refresh token");
-        callback();
-        return;
+        return callback(false);
     } else {
         var email = gapi._auth.cache.email;
         var scope = gapi._auth.cache.scope;
         var private_key_str = gapi._auth.cache.key;
-        gapi.auth(email, scope, private_key_str, callback);
+        return gapi.auth(email, scope, private_key_str, callback);
     }
 }
 
@@ -28,12 +27,10 @@ gapi.auth = function (email, scope, private_key_str, callback) {
             console.log("Token Expired, Requesting New One...");
             gapi._auth.bAuth = false;
 
-            gapi.auth(email, scope, private_key_str, callback);
-            return;
+            return gapi.auth(email, scope, private_key_str, callback);
         } else {
             console.log("Token is still valid, skipping new request");
-            callback(false);
-            return;
+            return callback(false);
         }
     }
 
@@ -77,13 +74,11 @@ gapi.auth = function (email, scope, private_key_str, callback) {
                 gapi._auth.exp = pClaim.exp;
                 gapi._auth.access_token = response.access_token;
                 gapi._auth.bAuth = true;
-                callback(true);
-                return;
+                return callback(true);
             }
         } else {
             console.error(XHR.responseText);
-            callback(false);
-            return;
+            return callback(false);
         }
         //token = response["access_token"]
     });
@@ -91,57 +86,85 @@ gapi.auth = function (email, scope, private_key_str, callback) {
     // We define what will happen in case of error
     XHR.addEventListener('error', function (event) {
         console.log('Oops! Something went wrong.');
-        callback(false);
-        return;
+        return callback(false);
     });
 
     XHR.open('POST', 'https://www.googleapis.com/oauth2/v4/token');
     XHR.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
     XHR.send(urlEncodedData)
-    return;
+    return callback(false);
 }
 
 gapi.print = {};
 gapi.drive = {};
 gapi.gmail = {};
 
-gapi.print.submit = function (img, name, email) {
-    console.log("pre refresh")
+gapi.print.submit = async function (content, contentType, title, printerID) {
     // Make sure we have an access token
-    gapi.refresh(() => {
-        console.log("printing");
-        var xhr = new XMLHttpRequest();
-        var printerID = (email == undefined) ? "eddsecp@cpsfc.org" : email;//Also Target Email, "b45bfeeb-46b2-2665-3169-738623ffd140"; // Ringo for Testing, change to proper printer on deploy
-        var title = name;//"Test Print Job";
-        var data = img;
-        var contentType = "image/png";
-        var tags = "Automated; Sign In; ID";
+    return gapi.refresh(async (auth) => {
+        var url = "https://cors-anywhere.herokuapp.com/https://www.google.com/cloudprint/submit";//'https://www.google.com/cloudprint/search';
 
-        //formData.append("", "drunknight");
-        //var url = 'https://www.google.com/cloudprint/search';
         var authStr = "Bearer " + gapi._auth.access_token;
-        var url = 'https://docs.google.com/forms/d/e/1FAIpQLScygIXCUFbpQGrZ7o6Tbiy-GIQQGprPeXnEYEdrjbqf5wKcRA/formResponse?usp=pp_url&entry.558004711=' + encodeURIComponent(authStr) + '&entry.1902462614=' + encodeURIComponent(printerID) + '&entry.1783159477=' + encodeURIComponent(title) + '&entry.1789236024=' + encodeURIComponent(data) + '&entry.1329547601=' + encodeURIComponent(contentType) + '&entry.886182819=' + encodeURIComponent(tags);
-        xhr.open('POST', url, true);
-        //formData.append("auth", "Bearer" + gapi._auth.access_token);
 
-        //xhr.setRequestHeader("Content-Type", undefined);//"application/x-www-form-urlencoded");
-        //xhr.setRequestHeader("Authorization", "Bearer" + gapi._auth.access_token);
+        //var printerID = "b45bfeeb-46b2-2665-3169-738623ffd140";
+        var ticket = `{
+            "version": "1.0",
+            "print": {
+                "vendor_ticket_item": [],
+                "copies": {
+                    "copies": 1
+                }
+            }
+        }`
 
-        xhr.addEventListener('load', function (e) {
-            console.log(e);
-            console.error(xhr.responseText);
+        var fd = new FormData();
+
+        fd.append("printerid", printerID);
+        fd.append("title", title);
+        fd.append("ticket", ticket);
+        fd.append("content", content);
+        fd.append("contentType", contentType);
+
+        var out;
+
+        var json = await fetch(url, {
+            method: "POST",
+            body: fd,
+            headers: {
+                'Authorization': authStr
+            }
+        })
+            .then(resp => resp.json());
+        //.then(json => {console.log(json); return json}).then(json => {out = json.job.ticketUrl});
+        console.log(json);
+        console.log(json.job.ticketUrl);
+        return json.job.ticketUrl;
+
+        return out;
+    });
+}
+
+gapi.print.status = function (id) {
+    gapi.refresh(() => {
+        gapi.refresh(() => {
+            var url = "https://cors-anywhere.herokuapp.com/"//https://www.google.com/cloudprint/ticket";
+
+            var authStr = "Bearer " + gapi._auth.access_token;
+
+            var fd = new FormData();
+
+            fd.append("jobid", id);
+
+            fetch(url + id, {
+                method: "GET",
+                //body: fd,
+                headers: {
+                    'Authorization': authStr
+                }
+            })
+                .then(resp => resp.text())
+                .then(json => console.log(json));
         });
-
-        xhr.addEventListener('error', function (event) {
-            console.log('Oops! Something went wrong.');
-            return;
-        });
-
-        //console.log("submitted search request");
-
-        xhr.send();//formData);
-
-        //$.ajax({type: "POST", url: 'https://www.google.com/cloudprint/search', data: {}, success: (data, status) => {console.log(status);console.log(data);}});
     });
 }
 

@@ -1,3 +1,4 @@
+<!DOCtYPE html>
 <html>
 
 <head>
@@ -21,8 +22,6 @@
       /*background-color: #FAFAFA;*/
       font-family: "Open Sans", "sans-serif";
     }
-
-
 
     .hidden {
       display: none;
@@ -103,10 +102,6 @@
 
     .mdl-cell {
       box-sizing: border-box;
-      /*background-color: #BDBDBD;
-    color: white;
-    border-color: black;
-    border-style: solid;*/
 
       text-align: center;
     }
@@ -171,11 +166,6 @@
       max-width: 100%;
     }
 
-    /*#open-settings {
-      color: red;
-    }*/
-
-
     #numpad_container {
       display: block;
       width: 25rem;
@@ -230,6 +220,15 @@
       text-align: center;
       letter-spacing: .5rem;
     }
+
+    .secondary-color .mdl-spinner__layer {
+      border-color: #4caf50 !important;
+    }
+
+    #loading-modal {
+      border-style: none;
+      background: none;
+    }
   </style>
 
 
@@ -259,7 +258,7 @@
 
   </div>
   <div class="mdl-grid main mdl-grid--no-spacing">
-    <div class="mdl-cell mdl-cell--4-col"><span></span></div>
+    <div class="mdl-cell mdl-cell--4-col"></div>
     <div class="mdl-cell mdl-cell--4-col">
       <form id="form">
         <strong>
@@ -307,6 +306,7 @@
     </div>
     <div class="mdl-cell mdl-cell--4-col"><span></span></div>
   </div>
+
   <div class="mdl-grid footer mdl-grid--no-spacing">
     <div class="mdl-cell mdl-cell--3-col"><span>
         <button id="lang" class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect mdl-button--accent">
@@ -404,7 +404,7 @@
       </div>
     </div>
   </dialog>
-
+  <!--Comments One-->
   <dialog class="mdl-dialog full-modal" id="signout-modal">
     <span class="close">&times;</span>
     <h4 class="mdl-dialog__title" id="signout-title">Sign In/Out a Student</h4>
@@ -412,12 +412,20 @@
       <webview id="webview"
         src="https://docs.google.com/forms/viewform?bc=transparent&embedded=true&f=%2522Open%2BSans%2522%252C%2Bsans-serif&hl=en&htc=%2523eeeeee&id=1Rhpwv-araIaZroQZoEIWZKFqTfHIbDu2Y1uixdsd6Ho&lc=%2523298cca&pli=1&tc=%2523616161&ttl=0">
       </webview>
+    </div>
   </dialog>
-
+  <!--Comment Two-->
+  <dialog id="loading-modal">
+    <div class="secondary-color mdl-spinner mdl-spinner--single-color mdl-js-spinner is-active"></div>
+  </dialog>
+  
+  <!--Comment Three-->
+  <script src="pdf.js"></script>
+  <script src="pdf.worker.js"></script>
+  <script src="pdf-lib.js"></script>
+  <script src="fontkit.umd.js"></script>
   <script src="jquery.min.js"></script>
   <script src="jsrsasign-latest-all-min.js"></script>
-  <script src="canvg.min.js"></script>
-  <script src="jspdf.min.js"></script>
   <script src="material.js"></script>
   <script src="cropper/cropper.js"></script>
   <script src="cropper/jquery-cropper.js"></script>
@@ -425,7 +433,6 @@
   <script src="template.js"></script>
   <script src="languative.js"></script>
   <script type="module" src="app.js"></script>
-
 </body>
 
 </html>

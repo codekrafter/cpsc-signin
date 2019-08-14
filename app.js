@@ -5,22 +5,28 @@
 var cropper;
 
 var croppedImage;
-var previewed;
-var svg;
 
-var generateSVG;
+//var generateSVG;
+//var svgParams = {};
+//var svg;
+
 var reset;
-
-var svgParams = {};
 
 var settingsCode = "";
 var doKeypadAction;
 var openSettingsCode = "";
 var openSettings;
 
-var updateTranslation;
+var generatePdf; // func
+var renderPdf; // func
+var pdfData; // global
 
+var updateTranslation;
 var currentLangauge = "en";
+
+var startLoading;
+var stopLoading;
+var currentLoading = 0;
 
 var timeout;
 var doTimeout;
@@ -30,7 +36,14 @@ var ProgramStateEnum = Object.freeze({ "HOME_SCREEN": 0, "SIGN_OUT": 1, "IMG_CAP
 
 var CurrentState = ProgramStateEnum.HOME_SCREEN;
 
-// Pre-Authenticate on Boot to save time when uploading image
+var currentPrintJob;
+
+$("#loading-modal")[0].showModal();
+
+/*
+ * Authentication and initial loading
+ */
+
 function auth() {
   $.getJSON("priv_service_account.json", function (json) {
     gapi.auth(json.client_email, "https://www.googleapis.com/auth/cloudprint https://www.googleapis.com/auth/drive", json.private_key, (success) => {
@@ -106,7 +119,294 @@ $().ready(() => {
     button_print: "Print",
     button_cancel: "Cancel"
   })
+
+  stopLoading();
 })
+
+/*
+ * Timeout Logic
+ */
+
+function resetDoTimeout() {
+  clearTimeout(timeout);
+  timeout = setTimeout(doTimeout, TIMEOUT_TIME);
+}
+
+doTimeout = function () {
+  $("dialog:not(#loading-modal)").each(function (i, e) { e.close(); });
+  reset();
+}
+
+$(document).on("keydown mousemove", resetDoTimeout);
+
+/*
+ * Modal closing logic
+ */
+$('body').on('click', '.close', function () {
+  console.log(this.classList + ", is executing a close/goback");
+  reset();
+  $(this).parents("dialog")[0].close();
+  CurrentState = ProgramStateEnum.HOME_SCREEN;
+})
+
+$("dialog:not(#loading-modal)").click(function (event) {
+  if (event.target == this) {
+    reset();
+    this.close();
+    CurrentState = ProgramStateEnum.HOME_SCREEN;
+  }
+});
+
+/* 
+ * Resetting
+ */
+reset = function () {
+  $("input[type=text]").val("");
+  $('input[type="radio"]').prop('checked', false).parent().removeClass('is-checked');
+
+  $("#player").removeClass("hidden");
+  $("#main-canvas").addClass("hidden");
+  $("#flash-blocker").addClass("hidden").css({ opacity: 1 });
+  $("#main-canvas").cropper('destroy');
+
+
+  $("#btn-pri")/*.addClass("capture")*/.removeClass("crop").removeClass("btn-preview").removeClass("print")//.text("Capture");
+  $("#btn-sec")/*.removeClass("retake")*/.addClass("go-back")//.text("Go Back");
+
+  settingsCode = "";
+}
+
+/*
+ * Keyboard Control
+ */
+$(document).on('keyup', function (e) {
+  if ($("#settings-modal").prop("open")) {
+    if (48 <= e.which && e.which <= 57) {
+      doKeypadAction(e.key);
+    } else if (e.which == 8) {
+      doKeypadAction("DEL");
+    }
+  } else if (e.which == 13) {
+    if ($(e.target).parents("#form") && $(e.target).is("input")) {
+      $("#submit").click();
+    } else {
+      $(e.target).parents("button").click();
+    }
+  } else {
+    if (e.which == 32) {
+      openSettingsCode = "";
+    } else {
+      openSettingsCode += e.key;
+    }
+
+    if (openSettingsCode == "huntst") {
+      openSettings();
+    }
+  }
+});
+
+/*
+ * PIN Handling
+ */
+
+function updatePIN() {
+  var correct = false;
+  $("#passcode").removeClass("pass-ok");
+  $("#passcode").removeClass("pass-bad");
+  if (settingsCode === "121") {
+    $("#mode-sel")[0].disabled = false;
+    $("#numpad_container .mdl-switch").removeClass("is-disabled");
+    $("#passcode").addClass("pass-ok");
+
+    correct = true;
+  } else {
+    if (settingsCode.length == 3) {
+      $("#passcode").addClass("pass-bad");
+    }
+
+    if (settingsCode.length == 4) {
+      settingsCode = settingsCode[3];
+    }
+
+    $("#mode-sel")[0].disabled = true;
+    $("#numpad_container .mdl-switch").addClass("is-disabled");
+  }
+  var pinOut = "";
+  var pinNum = (correct) ? settingsCode.length : settingsCode.length - 1
+  for (var i = 0; i < pinNum; i++) {
+    pinOut += "*";
+  }
+  if (settingsCode.length > 0 && !correct) {
+    pinOut = pinOut + settingsCode[settingsCode.length - 1];
+  }
+  $("#numpad_container input[type=text]").val(pinOut);
+}
+
+/* 
+ * Settings Opening
+ */
+
+$("#numpad_container button:not(#save-settings)").click((e) => { doKeypadAction($(e.target).parents("button").text().trim()); });
+
+doKeypadAction = function (action) {
+  action = action.trim();
+  if (action === "DEL") {
+    if (settingsCode.length > 1) {
+      settingsCode = settingsCode.substr(0, settingsCode.length - 1)
+    } else {
+      settingsCode = "";
+    }
+
+    updatePIN();
+  } else if (action === "CLR") {
+    settingsCode = "";
+
+    updatePIN();
+  } else {
+    settingsCode = settingsCode + action;
+    updatePIN();
+  }
+};
+
+$("#open-settings").click(() => openSettings());
+
+openSettings = function () {
+  console.log($("#settings-modal")[0])
+  $("#settings-modal")[0].showModal();
+  $("#mode-sel").prop('disabled', true);
+
+  return false;
+};
+
+/*
+ * Settings Saving
+ */
+$("#save-settings").click(function () {
+  chrome.storage.local.set({ isK4: $("#mode-sel-label").hasClass("is-checked") }, function () { console.log("isK4 saved") });
+});
+
+/*
+ * Language switching
+ */
+
+$("#lang").click(() => {
+  console.log(JSON.stringify(languative.getDictionary("html")));
+  if (currentLangauge == "en") {
+    console.log("changing language to spanish")
+    languative.changeLanguage('es');
+    currentLangauge = "es";
+  } else if (currentLangauge == "es") {
+    console.log("changing language to english")
+    languative.changeLanguage('en');
+    currentLangauge = "en";
+  } else {
+    console.log("unknown language '" + currentLangauge + "'");
+  }
+});
+
+/*
+ * PDF Generation and Rendering
+ */
+
+generatePdf = async function (name, dest, reason, img) {
+  startLoading();
+  var pdfData = await fetch("template.pdf").then(resp => resp.arrayBuffer())//.then(blob => blob.arrayBuffer());
+  const pdfDoc = await PDFLib.PDFDocument.load(pdfData);
+  pdfDoc.registerFontkit(fontkit);
+  var comicSans = await fetch("ComicSans.ttf").then(resp => resp.arrayBuffer());
+  var textFont = await pdfDoc.embedFont(comicSans);//PDFLib.StandardFonts.HelveticaBold);
+
+  var pages = pdfDoc.getPages();
+  var page = pages[0]
+  const { width, height } = page.getSize();
+  console.log(page);
+  var text = reason;
+  var size = 15;
+  page.drawText(text, {
+    x: (width / 2) - (textFont.widthOfTextAtSize(text, size) / 2),
+    y: height * 3 / 16,
+    size: size,
+    font: textFont
+  })
+
+  text = dest;
+  page.drawText(text, {
+    x: (width / 2) - (textFont.widthOfTextAtSize(text, size) / 2),
+    y: height * 2 / 8,
+    size: size,
+    font: textFont
+  })
+
+  size = 30;
+  text = name;
+  page.drawText(text, {
+    x: (width / 2) - (textFont.widthOfTextAtSize(text, size) / 2),
+    y: height * 11 / 32,
+    size: size,
+    font: textFont
+  })
+
+  const imageEmbed = await pdfDoc.embedPng(img);
+  const inDims = imageEmbed.scale(1);
+  const dims = {
+    width: 109.44,
+    height: (inDims.height / inDims.width) * 109.44
+  }
+  page.drawImage(imageEmbed, {
+    x: 51.12,//page.getWidth() / 2 - dims.width / 2,
+    y: page.getHeight() - (25.92 + dims.height),//page.getHeight() / 2 - dims.height / 2,
+    width: 109.44,
+    height: (inDims.height / inDims.width) * 109.44,
+  })
+
+  pdfData = await pdfDoc.save().then(arr => arr.buffer);
+  stopLoading();
+  return pdfData;
+}
+
+renderPdf = async function (pdfData, canvas) // pdfData = ArrayBuffer, canvas = jquery element
+{
+  startLoading();
+  var pdf = await pdfjsLib.getDocument(pdfData).promise;
+  var page = await pdf.getPage(1);
+  var viewport = page.getViewport(1.5);
+
+  canvas.attr("width", viewport.width + 5).attr("height", viewport.height + 5);
+
+  var context = canvas[0].getContext('2d');
+  console.log(viewport)
+  var renderContext = {
+    canvasContext: context,
+    viewport: viewport
+  }
+  page.render(renderContext);
+
+  stopLoading();
+}
+
+/* 
+ * Loading system control
+ */
+
+startLoading = function () {
+  currentLoading++;
+
+  if (currentLoading > 0 && !$("#loading-modal").prop("open")) {
+    $("#loading-modal")[0].showModal();
+  }
+};
+
+stopLoading = function () {
+  currentLoading = Math.max(currentLoading - 1, 0);
+
+  if (currentLoading == 0) {
+    $("#loading-modal")[0].close();
+  }
+};
+
+/*
+ * Auxiliary Windows
+ */
 
 $("#signout").click(() => {
   $("#signout-modal")[0].showModal();
@@ -122,39 +422,6 @@ $("#signout").click(() => {
   }
 });
 
-function resetDoTimeout() {
-  clearTimeout(timeout);
-  timeout = setTimeout(doTimeout, TIMEOUT_TIME);
-}
-
-doTimeout = function () {
-  $("dialog").each(function (i, e) { e.close(); });
-  reset();
-}
-
-$(document).on("keydown mousemove", resetDoTimeout);
-
-/*$("#asp-signout").click(() => {
-  $("#signout-modal")[0].showModal();
-
-  CurrentState = ProgramStateEnum.SIGN_OUT;
-
-  //$("#webview").attr('width', $("#signout-modal .modal-content").innerWidth());
-  $("#signout-title").text("Afterschool Signout");
-  $("#webview").attr('src', 'https://docs.google.com/forms/d/e/1FAIpQLSdCEurgP3AIkaaSWhHn8HbDiEzPYbUfqgBaICsI8cjktqPZ4g/viewform?usp=sf_link');
-});*/
-
-$("#open-settings").click(() => openSettings());
-
-openSettings = function () {
-  console.log($("#settings-modal")[0])
-  $("#settings-modal")[0].showModal();
-  $("#mode-sel").prop('disabled', true);
-
-  return false;
-};
-
-
 $("#clock-in-out").click(() => {
   $("#signout-modal")[0].showModal();
 
@@ -164,6 +431,11 @@ $("#clock-in-out").click(() => {
   $("#signout-title").text(languative.getPhrase("title_clock_in_out"));
   $("#webview").attr('src', 'https://docs.google.com/forms/d/e/1FAIpQLScP2Le5BcySDhdsDamHABxLgnD4TCwjx1g4vQTCvmlc530uoQ/viewform');
 });
+
+/*
+ * Normal Sign In Flow
+ */
+
 
 $("input[type=radio]").click(() => {
   $(".radio-error").removeClass("radio-error");
@@ -226,60 +498,6 @@ $("#submit").click(() => {
   $("#main-canvas").attr("height", $("#player").height());
 });
 
-$('body').on('click', '.close', function () {
-  console.log(this.classList + ", is executing a close/goback");
-  reset();
-  $(this).parents("dialog")[0].close();
-  CurrentState = ProgramStateEnum.HOME_SCREEN;
-})
-
-$("dialog").click(function (event) {
-  if (event.target == this) {
-    reset();
-    this.close();
-    CurrentState = ProgramStateEnum.HOME_SCREEN;
-  }
-});
-
-$(document).on('keyup', function (e) {
-  if ($("#settings-modal").prop("open")) {
-    if (48 <= e.which && e.which <= 57) {
-      doKeypadAction(e.key);
-    } else if (e.which == 8) {
-      doKeypadAction("DEL");
-    }
-  } else if (e.which == 13) {
-    if ($(e.target).parents("#form") && $(e.target).is("input")) {
-      $("#submit").click();
-    } else {
-      $(e.target).parents("button").click();
-    }
-  } else {
-    if (e.which == 32) {
-      openSettingsCode = "";
-    } else {
-      openSettingsCode += e.key;
-    }
-
-    if (openSettingsCode == "huntst") {
-      openSettings();
-    }
-  }
-});
-
-reset = function () {
-  $("input[type=text]").val("");
-  $('input[type="radio"]').prop('checked', false).parent().removeClass('is-checked');
-
-  $("#player").removeClass("hidden");
-  $("#main-canvas").addClass("hidden");
-  $("#flash-blocker").addClass("hidden").css({ opacity: 1 });
-
-  $("#btn-pri")/*.addClass("capture")*/.removeClass("crop").removeClass("btn-preview").removeClass("print")//.text("Capture");
-  $("#btn-sec")/*.removeClass("retake")*/.addClass("go-back")//.text("Go Back");
-
-  settingsCode = "";
-}
 
 $('body').on('click', '.capture', () => {
   console.log("capturing");
@@ -332,8 +550,9 @@ $('body').on('click', '.crop', () => {
   CurrentState = ProgramStateEnum.IMG_CROP;
   $("#flash-blocker").addClass("hidden");
   let factor = 1 / 3;
+  let ratio = 1.21710526; // height to width
   var width = 1030 * factor;
-  var height = 1283 * factor;
+  var height = width * ratio;//1283 * factor;
 
   $("#main-canvas").cropper({
     viewMode: 0,
@@ -358,7 +577,7 @@ $('body').on('click', '.crop', () => {
   $("#btn-pri").removeClass("crop").addClass("btn-preview").text(languative.getPhrase("button_preview"));
 });
 
-$('body').on('click', '.btn-preview', function () {
+$('body').on('click', '.btn-preview', async function () {
   CurrentState = ProgramStateEnum.ID_PREVIEW;
 
   var img = "";
@@ -368,32 +587,52 @@ $('body').on('click', '.btn-preview', function () {
     $("#main-canvas").cropper('destroy');
   }
 
+  var today = new Date();
+  var dd = today.getDate();
+  var mm = today.getMonth() + 1; //January is 0!
+
+  var yyyy = today.getFullYear();
+  if (dd < 10) {
+    dd = '0' + dd;
+  }
+  if (mm < 10) {
+    mm = '0' + mm;
+  }
+
+  var dateText = dd + '/' + mm + '/' + yyyy;
+
   var reason = $('input[type=radio][name=reason]').filter(':checked').val();
+  reason = reason + " (" + dateText + ")";
   var name = $("input[name=name]").val();
   var dest = $("input[name=dest]").val()
 
-  svg = generateSVG(dest, reason, name, img);
+  //svg = generateSVG(dest, reason, name, img);
 
-  $("#main-canvas").attr("height", 504).attr("width", 353);
-
+  //$("#main-canvas").attr("height", 265/*504*/).attr("width", 172/*353*/);
+  /*
   var ctx = $("#main-canvas")[0].getContext('2d');
 
   ctx.clearRect(0, 0, $("#main-canvas").width(), $("#main-canvas").height());
   var img = new Image();
   img.onload = function () {
     ctx.drawImage(img, 0, 0);
+
+    refreshPDF();
   }
 
   var url = 'data:image/svg+xml;base64, ' + btoa(svg);//URL.createObjectURL(blob);
   let image = document.createElement('img');
-  img.src = url;
+  img.src = url;*/
+  ctx.clearRect(0, 0, $("#main-canvas").width(), $("#main-canvas").height());
+  pdfData = await generatePdf(name, dest, reason, img);
+  await renderPdf(pdfData, $("#main-canvas"));
 
-  $("#btn-pri").removeClass("btn-preview").addClass("print").text(languative.getPhrase("button_print"));
+  $("#btn-pri").removeClass("btn-preview").addClass("print").text(languative.getPhrase("button_submit"));
   $("#btn-sec").removeClass("retake").addClass("go-back").text(languative.getPhrase("button_cancel"));
 });
 
-$('body').on('click', '.print', function () {
-  gapi.drive.upload("ID: " + svgParams.title, svg, "image/svg+xml", (success, id) => {
+$('body').on('click', '.print', async function () {
+  /*gapi.drive.upload("ID: " + svgParams.title, svg, "image/svg+xml", (success, id) => {
     if (!success) {
       console.error("Error on File Upload");
     } else {
@@ -403,114 +642,17 @@ $('body').on('click', '.print', function () {
       } else {
         email = "kay@cpsfc.org";
       }
-      gapi.print.submit(id, svgParams.title, email);
+      //gapi.print.submit(id, svgParams.title, email);
     }
-  });
-
+  });*/
+  startLoading();
+  var name = $("input[name=name]").val();
+  var blob = new Blob([pdfData]);
+  currentPrintJob = await gapi.print.submit(blob, "application/pdf", "ID for " + name, "b45bfeeb-46b2-2665-3169-738623ffd140");
   $("#main-modal")[0].close();
   reset();
 
   CurrentState = ProgramStateEnum.HOME_SCREEN;
-});
 
-// Generate an ID in the SVG format for the given name, year, title and image (in a base 64 uri)
-generateSVG = function (name, year, title, image) {
-  // Cache the parameters for future reference
-  svgParams.name = name;
-  svgParams.year = year;
-  svgParams.title = title;
-  svgParams.image = image;
-
-  // Generate the name of the file, using the name field
-  var id_name = "id_" + name.toLowerCase().replace(" ", "_") + ".svg";
-  // Get the text of the template, defined in template.js
-  var svg = TEXT_svg_template
-    // Insert the name into the template
-    .replace("[[NAME]]", name)
-    // Insert the year into the template
-    .replace("[[YEAR]]", year)
-    // Insert the title into the template
-    .replace("[[TITLE]]", title)
-    // Insert the image into the template
-    .replace("[[IMAGE]]", image);
-
-
-  return svg;
-
-}
-
-$("#save-settings").click(function () {
-  chrome.storage.local.set({ isK4: $("#mode-sel-label").hasClass("is-checked") }, function () { console.log("isK4 saved") });
-});
-
-function updatePIN() {
-  var correct = false;
-  $("#passcode").removeClass("pass-ok");
-  $("#passcode").removeClass("pass-bad");
-  // Hello! You can do inspect element. Thats cool. If you actually know what you are doing, talk to tech, you might be able to find some things to do. If not then just go away
-  if (settingsCode === "121") {
-    $("#mode-sel")[0].disabled = false;
-    $("#numpad_container .mdl-switch").removeClass("is-disabled");
-    $("#passcode").addClass("pass-ok");
-
-    correct = true;
-  } else {
-    if (settingsCode.length == 3) {
-      $("#passcode").addClass("pass-bad");
-    }
-
-    if (settingsCode.length == 4) {
-      settingsCode = settingsCode[3];
-    }
-
-    $("#mode-sel")[0].disabled = true;
-    $("#numpad_container .mdl-switch").addClass("is-disabled");
-  }
-  var pinOut = "";
-  var pinNum = (correct) ? settingsCode.length : settingsCode.length - 1
-  for (var i = 0; i < pinNum; i++) {
-    pinOut += "*";
-  }
-  if (settingsCode.length > 0 && !correct) {
-    pinOut = pinOut + settingsCode[settingsCode.length - 1];
-  }
-  $("#numpad_container input[type=text]").val(pinOut);
-}
-
-// Settings Manager
-$("#numpad_container button:not(#save-settings)").click((e) => { doKeypadAction($(e.target).parents("button").text().trim()); });
-
-doKeypadAction = function (action) {
-  action = action.trim();
-  if (action === "DEL") {
-    if (settingsCode.length > 1) {
-      settingsCode = settingsCode.substr(0, settingsCode.length - 1)
-    } else {
-      settingsCode = "";
-    }
-
-    updatePIN();
-  } else if (action === "CLR") {
-    settingsCode = "";
-
-    updatePIN();
-  } else {
-    settingsCode = settingsCode + action;
-    updatePIN();
-  }
-};
-
-$("#lang").click(() => {
-  console.log(JSON.stringify(languative.getDictionary("html")));
-  if (currentLangauge == "en") {
-    console.log("changing language to spanish")
-    languative.changeLanguage('es');
-    currentLangauge = "es";
-  } else if (currentLangauge == "es") {
-    console.log("changing language to english")
-    languative.changeLanguage('en');
-    currentLangauge = "en";
-  } else {
-    console.log("unknown language '" + currentLangauge + "'");
-  }
+  stopLoading();
 });
