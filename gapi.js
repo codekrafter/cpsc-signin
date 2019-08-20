@@ -194,8 +194,51 @@ gapi.gmail.send = function (to, cc, id) {
     });
 }
 
-// Name is for future compatibility, it is currently ignored
-gapi.drive.upload = function (name, data, contentType, callback) {
+gapi.drive.upload = async function (name, data, contentType) {
+    return gapi.refresh(async () => {
+        let authStr = "Bearer " + gapi._auth.access_token;
+        var fd = new FormData();
+
+        var id = await fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=media", {
+            method: "POST",
+            body: data,
+            headers: {
+                'Authorization': authStr
+            }
+        }).then(resp => resp.json()).then(json => json.id.trim());
+        console.log(id);
+        let meta = {
+            name: name
+        };
+
+        await fetch("https://www.googleapis.com/drive/v3/files/" + id, {
+            method: "PATCH",
+            body: JSON.stringify(meta),
+            headers: {
+                'Authorization': authStr,
+                'Content-Type': "application/json"
+            }
+        });
+
+        var permissions = {
+            'type': 'domain',
+            'role': 'reader',
+            'domain': 'cpsfc.org'
+        };
+        await fetch("https://www.googleapis.com/drive/v3/files/" + id + "/permissions?sendNotificationEmail=false", {
+            method: "POST",
+            body: JSON.stringify(permissions),
+            headers: {
+                'Authorization': authStr,
+                'Content-Type': "application/json"
+            }
+        }).then(resp => resp.json()).then(json => console.log(json));
+
+        return id;
+    });
+}
+
+gapi.drive.upload_old = function (name, data, contentType, callback) {
     // Make sure we have an access token
     gapi.refresh(() => {
         var id;

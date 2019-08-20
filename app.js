@@ -1,3 +1,19 @@
+(function () {
+  var old = console.log;
+  var logger = document.getElementById('log');
+  console.log = function () {
+    for (var i = 0; i < arguments.length; i++) {
+      if (typeof arguments[i] == 'object') {
+          logger.innerHTML += (JSON && JSON.stringify ? JSON.stringify(arguments[i], undefined, 2) : arguments[i]) + '<br />';
+      } else {
+          logger.innerHTML += arguments[i] + '<br />';
+      }
+    }
+  }
+})();
+
+console.error = console.debug = console.info = console.log;
+
 //'use strict';
 
 //import Cropper from './cropper/cropper.esm.js';
@@ -16,6 +32,7 @@ var settingsCode = "";
 var doKeypadAction;
 var openSettingsCode = "";
 var openSettings;
+var openLog;
 
 var generatePdf; // func
 var renderPdf; // func
@@ -150,6 +167,7 @@ $('body').on('click', '.close', function () {
 })
 
 $("dialog:not(#loading-modal)").click(function (event) {
+  console.log(event.target);
   if (event.target == this) {
     reset();
     this.close();
@@ -201,6 +219,11 @@ $(document).on('keyup', function (e) {
 
     if (openSettingsCode == "huntst") {
       openSettings();
+    }
+
+    if(openSettingsCode == "openlog")
+    {
+      openLog();
     }
   }
 });
@@ -309,7 +332,6 @@ $("#lang").click(() => {
  */
 
 generatePdf = async function (name, dest, reason, img) {
-  startLoading();
   var pdfData = await fetch("template.pdf").then(resp => resp.arrayBuffer())//.then(blob => blob.arrayBuffer());
   const pdfDoc = await PDFLib.PDFDocument.load(pdfData);
   pdfDoc.registerFontkit(fontkit);
@@ -366,7 +388,6 @@ generatePdf = async function (name, dest, reason, img) {
 
 renderPdf = async function (pdfData, canvas) // pdfData = ArrayBuffer, canvas = jquery element
 {
-  startLoading();
   var pdf = await pdfjsLib.getDocument(pdfData).promise;
   var page = await pdf.getPage(1);
   var viewport = page.getViewport(1.5);
@@ -380,8 +401,6 @@ renderPdf = async function (pdfData, canvas) // pdfData = ArrayBuffer, canvas = 
     viewport: viewport
   }
   page.render(renderContext);
-
-  stopLoading();
 }
 
 /* 
@@ -390,7 +409,7 @@ renderPdf = async function (pdfData, canvas) // pdfData = ArrayBuffer, canvas = 
 
 startLoading = function () {
   currentLoading++;
-
+  console.log("starting load with: " + currentLoading);
   if (currentLoading > 0 && !$("#loading-modal").prop("open")) {
     $("#loading-modal")[0].showModal();
   }
@@ -398,7 +417,7 @@ startLoading = function () {
 
 stopLoading = function () {
   currentLoading = Math.max(currentLoading - 1, 0);
-
+  console.log("stopping loading: " + currentLoading);
   if (currentLoading == 0) {
     $("#loading-modal")[0].close();
   }
@@ -579,7 +598,7 @@ $('body').on('click', '.crop', () => {
 
 $('body').on('click', '.btn-preview', async function () {
   CurrentState = ProgramStateEnum.ID_PREVIEW;
-
+  startLoading();
   var img = "";
 
   if ($("#main-canvas").cropper('getCroppedCanvas')) {
@@ -623,10 +642,12 @@ $('body').on('click', '.btn-preview', async function () {
   var url = 'data:image/svg+xml;base64, ' + btoa(svg);//URL.createObjectURL(blob);
   let image = document.createElement('img');
   img.src = url;*/
+  var ctx = $("#main-canvas")[0].getContext('2d');
   ctx.clearRect(0, 0, $("#main-canvas").width(), $("#main-canvas").height());
+
   pdfData = await generatePdf(name, dest, reason, img);
   await renderPdf(pdfData, $("#main-canvas"));
-
+  stopLoading();
   $("#btn-pri").removeClass("btn-preview").addClass("print").text(languative.getPhrase("button_submit"));
   $("#btn-sec").removeClass("retake").addClass("go-back").text(languative.getPhrase("button_cancel"));
 });
@@ -646,9 +667,60 @@ $('body').on('click', '.print', async function () {
     }
   });*/
   startLoading();
+
+  // Get ID/Sign In parameters
+  var reason = $('input[type=radio][name=reason]').filter(':checked').val();
   var name = $("input[name=name]").val();
+  var dest = $("input[name=dest]").val()
+
+  // Upload PDF for history
+  var id = await gapi.drive.upload(name, pdfData, "application/pdf");
+
+  // Submit google form for sign in log
+  var url = "https://sheets.googleapis.com/v4/spreadsheets/1yacVvurC1rhHry9r1wqFu8Im1uqAdkfReNY75SDkiwY/values/" + encodeURIComponent("SignInHistory!A:Z") + ":append?valueInputOption=USER_ENTERED";
+
+  var params = {
+    "entry.368107905": name,
+    "entry.1974954713": dest,
+    "entry.1677290880": reason,
+    "entry.999809141": [[[id, "ID Image.pdf", "application/pdf"]]]
+  };
+  var now = new Date(Date.now());
+  var body = {
+    "values": [
+      [
+        now.toString(),
+        name,
+        reason,
+        dest,
+        "https://drive.google.com/file/d/" + id
+      ]
+    ]
+  }
+  //https://docs.google.com/forms/d/e/1FAIpQLSeozXefU13EOewdAV2u6fEf_cP5kRfTKJd-tQvYkWdhy28F8w/viewform?usp=pp_url&entry.368107905=Name&entry.1677290880=Reason&entry.1974954713=Destination
+  console.log("submitting form");
+  await fetch(url, {
+    method: "POST",
+    body: JSON.stringify(body),
+    headers: {
+      'Authorization': "Bearer " + gapi._auth.access_token
+    },
+  })//.then(resp => resp.text()).then(json => console.log(json));
+  console.log("done submitting form");
+  // Send pdf for printing
   var blob = new Blob([pdfData]);
-  currentPrintJob = await gapi.print.submit(blob, "application/pdf", "ID for " + name, "b45bfeeb-46b2-2665-3169-738623ffd140");
+  console.log("printing");
+
+  var printerId;
+  if ($("#mode-sel-label").hasClass("is-checked")) {
+    // Elemtnary (John Lennon)
+    printerId = "0390a6e6-cb2d-92c6-0179-5f2f6612ec36";
+  } else {
+    // Middle (Geroge)
+    printerId = "44604813-18b5-2a70-ec52-36b6be4765ec";
+  }
+  currentPrintJob = await gapi.print.submit(blob, "application/pdf", "ID for " + name, printerId);
+  console.log("done printing")
   $("#main-modal")[0].close();
   reset();
 
@@ -656,3 +728,6 @@ $('body').on('click', '.print', async function () {
 
   stopLoading();
 });
+
+
+openLog = function() { $("#log-modal")[0].showModal();};

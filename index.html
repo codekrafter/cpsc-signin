@@ -73,6 +73,16 @@
       width: 100%;
     }
 
+    .mdl-dialog__content
+    {
+      height: 100%;
+    }
+
+    .dialog__content-short
+    {
+      height: 70%;
+    }
+
     .preview {
       padding: 1rem;
     }
@@ -330,7 +340,7 @@
   <dialog class="mdl-dialog txt-ctr" id="main-modal">
     <span class="close">&times;</span>
     <h4 class="mdl-dialog__title" id="modal-title">header_main_modal</h4>
-    <div class="mdl-dialog__content txt-ctr">
+    <div class="mdl-dialog__content dialog__content-short txt-ctr">
       <video id="player" class="preview" autoplay></video>
       <div>
         <canvas id="main-canvas" class="hidden preview"></canvas>
@@ -418,8 +428,14 @@
   <dialog id="loading-modal">
     <div class="secondary-color mdl-spinner mdl-spinner--single-color mdl-js-spinner is-active"></div>
   </dialog>
-  
-  <!--Comment Three-->
+
+  <dialog class="mdl-dialog full-modal" id="log-modal">
+      <span class="close">&times;</span>
+      <div class="mdl-dialog__content">
+        <pre id="log"></pre>
+      </div>
+    </dialog>
+
   <script src="pdf.js"></script>
   <script src="pdf.worker.js"></script>
   <script src="pdf-lib.js"></script>
@@ -432,7 +448,7 @@
   <script src="gapi.js"></script>
   <script src="template.js"></script>
   <script src="languative.js"></script>
-  <script type="module" src="app.js"></script>
+  <script src="app.js"></script>
 </body>
 
 </html>
