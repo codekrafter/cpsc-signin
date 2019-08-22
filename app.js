@@ -553,7 +553,7 @@ $('body').on('click', '.capture', () => {
 
   $("#flash-blocker").animate({
     opacity: 0,
-  }, 500);
+  }, 500, "swing", () => {$("#flash-blocker").addClass("hidden").css({ opacity: 1 });});
 
   $("#btn-pri").removeClass("capture").addClass("crop").text(languative.getPhrase("button_crop"));
   $("#btn-sec").removeClass("go-back").addClass("retake").text(languative.getPhrase("button_retake"));
@@ -657,6 +657,8 @@ $('body').on('click', '.btn-preview', async function () {
   stopLoading();
   $("#btn-pri").removeClass("btn-preview").addClass("print").text(languative.getPhrase("button_submit"));
   $("#btn-sec").removeClass("retake").addClass("go-back").text(languative.getPhrase("button_cancel"));
+
+  $("#btn-pri").focus();
 });
 
 $('body').on('click', '.print', async function () {
