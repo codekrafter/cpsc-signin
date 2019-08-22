@@ -1,6 +1,6 @@
 {
   "name": "CPSC Sign In",
-  "version": "2.6",
+  "version": "2.7.4",
   "manifest_version": 2,
   "app": {
     "background": {

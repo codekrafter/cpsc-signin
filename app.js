@@ -1,18 +1,21 @@
 (function () {
+  function getFunctionName() {
+    return (new Error()).stack.match(/at (\S+)/g)[1].slice(3);
+  }
+
   var old = console.log;
   var logger = document.getElementById('log');
-  console.log = function () {
+  console.error = console.warn = console.debug = console.info = console.log = function () {
     for (var i = 0; i < arguments.length; i++) {
       if (typeof arguments[i] == 'object') {
-          logger.innerHTML += (JSON && JSON.stringify ? JSON.stringify(arguments[i], undefined, 2) : arguments[i]) + '<br />';
+        logger.innerHTML += getFunctionName() + ": " + (JSON && JSON.stringify ? JSON.stringify(arguments[i], undefined, 2) : arguments[i]) + '<br />';
       } else {
-          logger.innerHTML += arguments[i] + '<br />';
+        logger.innerHTML += getFunctionName() + ": " + arguments[i] + '<br />';
       }
     }
+    old.apply(null, arguments);
   }
 })();
-
-console.error = console.debug = console.info = console.log;
 
 //'use strict';
 
@@ -54,8 +57,6 @@ var ProgramStateEnum = Object.freeze({ "HOME_SCREEN": 0, "SIGN_OUT": 1, "IMG_CAP
 var CurrentState = ProgramStateEnum.HOME_SCREEN;
 
 var currentPrintJob;
-
-$("#loading-modal")[0].showModal();
 
 /*
  * Authentication and initial loading
@@ -137,7 +138,9 @@ $().ready(() => {
     button_cancel: "Cancel"
   })
 
-  stopLoading();
+  console.warn("warning");
+  console.error("error");
+
 })
 
 /*
@@ -150,7 +153,7 @@ function resetDoTimeout() {
 }
 
 doTimeout = function () {
-  $("dialog:not(#loading-modal)").each(function (i, e) { e.close(); });
+  $("dialog").each(function (i, e) { e.close(); }); // add :not(#loading-modal) to exclude timeout
   reset();
 }
 
@@ -221,8 +224,7 @@ $(document).on('keyup', function (e) {
       openSettings();
     }
 
-    if(openSettingsCode == "openlog")
-    {
+    if (openSettingsCode == "openlog") {
       openLog();
     }
   }
@@ -313,7 +315,6 @@ $("#save-settings").click(function () {
  */
 
 $("#lang").click(() => {
-  console.log(JSON.stringify(languative.getDictionary("html")));
   if (currentLangauge == "en") {
     console.log("changing language to spanish")
     languative.changeLanguage('es');
@@ -332,16 +333,17 @@ $("#lang").click(() => {
  */
 
 generatePdf = async function (name, dest, reason, img) {
+  console.log("generating pdf...");
   var pdfData = await fetch("template.pdf").then(resp => resp.arrayBuffer())//.then(blob => blob.arrayBuffer());
   const pdfDoc = await PDFLib.PDFDocument.load(pdfData);
   pdfDoc.registerFontkit(fontkit);
+  console.log("set up, embedding font...");
   var comicSans = await fetch("ComicSans.ttf").then(resp => resp.arrayBuffer());
   var textFont = await pdfDoc.embedFont(comicSans);//PDFLib.StandardFonts.HelveticaBold);
-
+  console.log("font embeded");
   var pages = pdfDoc.getPages();
-  var page = pages[0]
+  var page = pages[0];
   const { width, height } = page.getSize();
-  console.log(page);
   var text = reason;
   var size = 15;
   page.drawText(text, {
@@ -350,7 +352,7 @@ generatePdf = async function (name, dest, reason, img) {
     size: size,
     font: textFont
   })
-
+  console.log("done drawing text");
   text = dest;
   page.drawText(text, {
     x: (width / 2) - (textFont.widthOfTextAtSize(text, size) / 2),
@@ -367,40 +369,45 @@ generatePdf = async function (name, dest, reason, img) {
     size: size,
     font: textFont
   })
-
+  console.log("done drawing text pt2")
   const imageEmbed = await pdfDoc.embedPng(img);
   const inDims = imageEmbed.scale(1);
   const dims = {
     width: 109.44,
     height: (inDims.height / inDims.width) * 109.44
   }
+  console.log("done embeding text");
   page.drawImage(imageEmbed, {
     x: 51.12,//page.getWidth() / 2 - dims.width / 2,
     y: page.getHeight() - (25.92 + dims.height),//page.getHeight() / 2 - dims.height / 2,
     width: 109.44,
     height: (inDims.height / inDims.width) * 109.44,
   })
-
+  console.log("done drawing image")
   pdfData = await pdfDoc.save().then(arr => arr.buffer);
+  console.log("done saving new pdf");
   stopLoading();
+  console.log("stopped the loading");
   return pdfData;
 }
 
 renderPdf = async function (pdfData, canvas) // pdfData = ArrayBuffer, canvas = jquery element
 {
+  console.log("rendering the pdf");
   var pdf = await pdfjsLib.getDocument(pdfData).promise;
   var page = await pdf.getPage(1);
   var viewport = page.getViewport(1.5);
-
+  console.log("done getting viewports");
   canvas.attr("width", viewport.width + 5).attr("height", viewport.height + 5);
 
   var context = canvas[0].getContext('2d');
-  console.log(viewport)
+  console.log("done getting contexts");
   var renderContext = {
     canvasContext: context,
     viewport: viewport
   }
-  page.render(renderContext);
+  console.log("rendering");
+  await page.render(renderContext);
 }
 
 /* 
@@ -408,19 +415,19 @@ renderPdf = async function (pdfData, canvas) // pdfData = ArrayBuffer, canvas = 
  */
 
 startLoading = function () {
-  currentLoading++;
-  console.log("starting load with: " + currentLoading);
-  if (currentLoading > 0 && !$("#loading-modal").prop("open")) {
+  //currentLoading++;
+  console.log("starting loading");// + currentLoading);
+  if (/*currentLoading > 0 &&*/ !$("#loading-modal").prop("open")) {
     $("#loading-modal")[0].showModal();
   }
 };
 
 stopLoading = function () {
-  currentLoading = Math.max(currentLoading - 1, 0);
-  console.log("stopping loading: " + currentLoading);
-  if (currentLoading == 0) {
-    $("#loading-modal")[0].close();
-  }
+  //currentLoading = Math.max(currentLoading - 1, 0);
+  console.log("stopping loading");// + currentLoading);
+  //if (currentLoading == 0) {
+  $("#loading-modal")[0].close();
+  //}
 };
 
 /*
@@ -730,4 +737,4 @@ $('body').on('click', '.print', async function () {
 });
 
 
-openLog = function() { $("#log-modal")[0].showModal();};
+openLog = function () { $("#log-modal")[0].showModal(); };
