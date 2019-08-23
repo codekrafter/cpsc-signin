@@ -135,7 +135,10 @@ $().ready(() => {
     button_retake: "Retake",
     button_preview: "Preview",
     button_print: "Print",
-    button_cancel: "Cancel"
+    button_cancel: "Cancel",
+    error_upload: "There was an error uploading the ID",
+    error_spreadsheet: "There was an error recording the sign in",
+    error_print: "There was an error printing the ID"
   })
 
   console.warn("warning");
@@ -553,7 +556,7 @@ $('body').on('click', '.capture', () => {
 
   $("#flash-blocker").animate({
     opacity: 0,
-  }, 500, "swing", () => {$("#flash-blocker").addClass("hidden").css({ opacity: 1 });});
+  }, 500, "swing", () => { $("#flash-blocker").addClass("hidden").css({ opacity: 1 }); });
 
   $("#btn-pri").removeClass("capture").addClass("crop").text(languative.getPhrase("button_crop"));
   $("#btn-sec").removeClass("go-back").addClass("retake").text(languative.getPhrase("button_retake"));
@@ -677,23 +680,54 @@ $('body').on('click', '.print', async function () {
   });*/
   startLoading();
 
+  var blob = new Blob([pdfData]);
+  console.log("printing");
+
+  var printerId;
+  if ($("#mode-sel-label").hasClass("is-checked")) {
+    // Elemtnary (John Lennon)
+    printerId = "0390a6e6-cb2d-92c6-0179-5f2f6612ec36";
+  } else {
+    // Middle (Geroge)
+    printerId = "44604813-18b5-2a70-ec52-36b6be4765ec";
+  }
+  try {
+    currentPrintJob = await gapi.print.submit(blob, "application/pdf", "ID for " + name, printerId);
+    console.log("done printing")
+  } catch (e) {
+    console.log("print error:")
+    console.log(e);
+    var data = { message: languative.getPhrase("error_print") };
+    $("#snack")[0].MaterialSnackbar.showSnackbar(data);
+    $("#main-modal")[0].close();
+    reset();
+    stopLoading();
+  }
+
   // Get ID/Sign In parameters
   var reason = $('input[type=radio][name=reason]').filter(':checked').val();
   var name = $("input[name=name]").val();
   var dest = $("input[name=dest]").val()
-
-  // Upload PDF for history
-  var id = await gapi.drive.upload(name, pdfData, "application/pdf");
-
+  try {
+    // Upload PDF for history
+    var id = await gapi.drive.upload(name, pdfData, "application/pdf");
+  } catch (e) {
+    console.log(e);
+    var data = { message: languative.getPhrase("error_upload") };
+    $("#snack")[0].MaterialSnackbar.showSnackbar(data);
+    $("#main-modal")[0].close();
+    reset();
+    stopLoading();
+  }
   // Submit google form for sign in log
   var url = "https://sheets.googleapis.com/v4/spreadsheets/1yacVvurC1rhHry9r1wqFu8Im1uqAdkfReNY75SDkiwY/values/" + encodeURIComponent("SignInHistory!A:Z") + ":append?valueInputOption=USER_ENTERED";
 
-  var params = {
+  /*var params = {
     "entry.368107905": name,
     "entry.1974954713": dest,
     "entry.1677290880": reason,
     "entry.999809141": [[[id, "ID Image.pdf", "application/pdf"]]]
-  };
+  };*/
   var now = new Date(Date.now());
   var body = {
     "values": [
@@ -708,28 +742,24 @@ $('body').on('click', '.print', async function () {
   }
   //https://docs.google.com/forms/d/e/1FAIpQLSeozXefU13EOewdAV2u6fEf_cP5kRfTKJd-tQvYkWdhy28F8w/viewform?usp=pp_url&entry.368107905=Name&entry.1677290880=Reason&entry.1974954713=Destination
   console.log("submitting form");
-  await fetch(url, {
-    method: "POST",
-    body: JSON.stringify(body),
-    headers: {
-      'Authorization': "Bearer " + gapi._auth.access_token
-    },
-  })//.then(resp => resp.text()).then(json => console.log(json));
-  console.log("done submitting form");
-  // Send pdf for printing
-  var blob = new Blob([pdfData]);
-  console.log("printing");
-
-  var printerId;
-  if ($("#mode-sel-label").hasClass("is-checked")) {
-    // Elemtnary (John Lennon)
-    printerId = "0390a6e6-cb2d-92c6-0179-5f2f6612ec36";
-  } else {
-    // Middle (Geroge)
-    printerId = "44604813-18b5-2a70-ec52-36b6be4765ec";
+  try {
+    await fetch(url, {
+      method: "POST",
+      body: JSON.stringify(body),
+      headers: {
+        'Authorization': "Bearer " + gapi._auth.access_token
+      },
+    })//.then(resp => resp.text()).then(json => console.log(json));
+  } catch (e) {
+    console.log(e);
+    var data = { message: languative.getPhrase("error_spreadsheet") };
+    $("#snack")[0].MaterialSnackbar.showSnackbar(data);
+    $("#main-modal")[0].close();
+    reset();
+    stopLoading();
   }
-  currentPrintJob = await gapi.print.submit(blob, "application/pdf", "ID for " + name, printerId);
-  console.log("done printing")
+  console.log("done submitting form");
+
   $("#main-modal")[0].close();
   reset();
 

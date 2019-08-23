@@ -136,6 +136,7 @@ gapi.print.submit = async function (content, contentType, title, printerID) {
         })
             .then(resp => resp.json());
         //.then(json => {console.log(json); return json}).then(json => {out = json.job.ticketUrl});
+        console.log("print: ");
         console.log(json);
         console.log(json.job.ticketUrl);
         return json.job.ticketUrl;
